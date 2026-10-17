@@ -1,0 +1,15 @@
+# Per-machine settings: copy the matching .env.example to .env and edit
+.env
+!.env.example
+# Generated / installed
+__pycache__/
+*.pyc
+node_modules/
+FaceView/frontend/dist/
+FaceView/frontend/.vite
+# Run artefacts and data never live in the repo
+logs/
+**/coordinate_transforms/manifest.jsonl
+**/coordinate_transforms/failures.jsonl
+**/coordinate_transforms/test_output/
+metadata/jobs/*

@@ -1,0 +1,383 @@
+import os
+import numpy as _np
+# restore removed aliases expected by old libs
+_aliases = [
+    ('bool', _np.bool_),  # type alias
+    ('int', int),
+    ('float', float),
+    ('complex', complex),
+    ('object', object),
+    ('unicode', str),
+    ('str', str),
+]
+for name, target in _aliases:
+    if not hasattr(_np, name):
+        setattr(_np, name, target)
+import numpy as np
+# If you're on Python 3.11+, chumpy also uses inspect.getargspec (removed):
+import inspect as _inspect
+from collections import namedtuple as _namedtuple
+if not hasattr(_inspect, "getargspec"):
+    def _shim_getargspec(func):
+        fas = _inspect.getfullargspec(func)
+        ArgSpec = _namedtuple("ArgSpec", "args varargs keywords defaults")
+        return ArgSpec(fas.args, fas.varargs, fas.varkw, fas.defaults)
+    _inspect.getargspec = _shim_getargspec
+
+
+
+import igl
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from types import SimpleNamespace
+import pickle
+
+import inspect
+from collections import namedtuple
+
+if not hasattr(inspect, "getargspec"):
+    def _shim_getargspec(func):
+        fas = inspect.getfullargspec(func)
+        ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+        return ArgSpec(fas.args, fas.varargs, fas.varkw, fas.defaults)
+    inspect.getargspec = _shim_getargspec  # monkey-patch for chumpy
+from flame_utils import FLAME, get_flame_blendshapes
+
+PROJ_ROOT = os.path.abspath(os.path.dirname(__file__))
+# PROJ_ROOT = "/Users/evanpan/Documents/GitHub/ManifoldExploration"
+
+class BasicBlendshapesTorch(nn.Module):
+    def __init__(self, V, F, blendshapes, names):
+        super(BasicBlendshapesTorch, self).__init__()
+        # Convert numpy arrays to torch tensors if they aren't already
+        self.V = torch.tensor(V, dtype=torch.float32) if isinstance(V, np.ndarray) else V
+        self.F = F
+        self.blendshapes = torch.tensor(blendshapes, dtype=torch.float32) if isinstance(blendshapes, np.ndarray) else blendshapes
+        
+        # Center vertices at origin
+        self.V = self.V - torch.mean(self.V, dim=0, keepdim=True)
+        self.V_cache = self.V.clone()  # Cache the neutral pose vertices
+        self.names = names
+        
+        # Calculate delta (magnitude of displacement for each vertex in each blendshape)
+        self.delta = torch.zeros((self.blendshapes.shape[0], self.V.shape[0]), dtype=torch.float32)
+        for i in range(self.blendshapes.shape[0]):
+            self.delta[i] = torch.norm(self.blendshapes[i], dim=1)
+        
+        # Initialize weights as parameters that can be optimized
+        self.weights = nn.Parameter(torch.zeros(self.blendshapes.shape[0], dtype=torch.float32))
+        
+        # Translation and scale as parameters
+        self.translation = nn.Parameter(torch.zeros(3, dtype=torch.float32))
+        self.scale_factor = nn.Parameter(torch.tensor(1.0, dtype=torch.float32))
+        
+        # Compute normals and facing direction
+        # Note: This would typically use a differentiable mesh normal computation
+        # Since igl is not directly compatible with PyTorch, we use the provided normals or compute placeholders
+        if isinstance(V, np.ndarray) and isinstance(F, np.ndarray):
+            try:
+                import igl
+                N = torch.tensor(igl.per_vertex_normals(V, F), dtype=torch.float32)
+            except:
+                # Fallback if igl is not available
+                N = self._compute_vertex_normals()
+        else:
+            N = self._compute_vertex_normals()
+            
+        self.facing_dir = torch.mean(N, dim=0)
+        self.facing_dir = self.facing_dir / torch.norm(self.facing_dir)
+        
+    def _compute_vertex_normals(self):
+        """Basic normal computation fallback if igl is not available"""
+        # This is a simplified version - in practice, you might want to use a differentiable mesh library
+        # or implement proper normal computation
+        device = self.V.device
+        normals = torch.zeros_like(self.V)
+        for face in self.F:
+            v0, v1, v2 = self.V[face[0]], self.V[face[1]], self.V[face[2]]
+            face_normal = torch.cross(v1 - v0, v2 - v0)
+            face_normal = face_normal / (torch.norm(face_normal) + 1e-10)
+            normals[face[0]] += face_normal
+            normals[face[1]] += face_normal
+            normals[face[2]] += face_normal
+        
+        # Normalize vertex normals
+        norms = torch.norm(normals, dim=1, keepdim=True)
+        normals = normals / (norms + 1e-10)
+        return normals
+        
+    def translate(self, delta_pos):
+        """Update translation by delta"""
+        delta_tensor = torch.tensor(delta_pos, dtype=torch.float32, device=self.translation.device) \
+                      if isinstance(delta_pos, np.ndarray) else delta_pos
+        self.translation.data += delta_tensor
+        
+    def scale(self, scaling=1.0):
+        """Set scale factor"""
+        self.scale_factor.data = torch.tensor(scaling, dtype=torch.float32, device=self.scale_factor.device) \
+                               if isinstance(scaling, (int, float)) else scaling
+    
+    def displacement(self, weights=None):
+        """Compute displacement based on weights"""
+        if weights is None:
+            weights = self.weights
+        
+        # Reshape blendshapes for matrix multiplication
+        bs_reshaped = self.blendshapes.reshape(weights.shape[0], -1)
+        # Compute weighted displacement
+        disp = torch.matmul(weights, bs_reshaped).reshape(self.V.shape[0], 3)
+        return disp
+
+    def eval(self, weights=None):
+        """Evaluate the model with optional weights"""
+        if weights is None:
+            weights = self.weights
+            
+        # Get base mesh and apply displacements
+        V = self.V.clone()
+        V = V + self.displacement(weights)
+        
+        # Apply scale and translation
+        V = V * self.scale_factor
+        V = V + self.translation
+        self.V_cache = V.clone()  # Cache the current vertices after evaluation
+        return V
+
+    def facing_dire(self):
+        """Return facing direction (typo preserved from original)"""
+        return self.facing_dir
+    
+    def forward(self, weights=None):
+        """Forward pass for nn.Module compatibility"""
+        return self.eval(weights)
+    
+    def __len__(self):
+        return self.blendshapes.shape[0]
+    
+    def __getitem__(self, idx):
+        return self.blendshapes[idx]
+
+class BasicBlendshapes:
+    def __init__(self, V, F, blenshapes, names):
+        # V = (# of vertices, 3)
+        # F = (# of faces, 3)
+        # blenshapes = (# of blendshapes, # of vertices, 3)
+        self.V = V # this is also the neutral pose
+        self.V -= np.mean(self.V, axis=0)
+        self.V_cache = self.V.copy()  # Cache the neutral pose vertices
+        self.F = F
+        self.blendshapes = blenshapes
+        self.names = names
+        self.delta = np.zeros((self.blendshapes.shape[0], self.V.shape[0]))
+        for i in range(self.blendshapes.shape[0]):
+            self.delta[i] = np.linalg.norm(self.blendshapes[i], axis=1)
+        self.weights = np.zeros(self.blendshapes.shape[0])
+        self.translation = np.array([0, 0, 0])
+        self.scale_factor = 1
+        N = igl.per_vertex_normals(self.V, self.F)
+        self.facing_dir = np.mean(N, axis=0)
+        self.facing_dir /= np.linalg.norm(self.facing_dir)
+
+    def translate(self, delta_pos):
+        self.translation += np.array(delta_pos)
+
+    def scale(self, scaling=1):
+        self.scale_factor = scaling
+    
+    def displacement(self, weights=None):
+        if weights is None:
+            weights = self.weights
+        return (weights @ self.blendshapes.reshape(weights.shape[0], -1)).reshape(self.V.shape[0], 3)
+
+    def eval(self, weights=None):
+        V = self.V.copy()
+        if weights is None:
+            weights = self.weights
+        V += self.displacement(weights)
+        V *= self.scale_factor
+        V += self.translation
+        self.V_cache = V.copy()  # Cache the current vertices after evaluation
+        return V
+
+    def facing_dire(self):
+        return self.facing_dir
+    
+    def __len__(self):
+        return self.blendshapes.shape[0]
+    
+    def __getitem__(self, idx):
+        return self.blendshapes[idx]
+
+class BasicBlendshapes:
+    def __init__(self, V, F, blenshapes, names):
+        # V = (# of vertices, 3)
+        # F = (# of faces, 3)
+        # blenshapes = (# of blendshapes, # of vertices, 3)
+        self.V = V # this is also the neutral pose
+        self.V -= np.mean(self.V, axis=0)
+        self.V_cache = self.V.copy()  # Cache the neutral pose vertices
+        self.F = F
+        self.blendshapes = blenshapes
+        self.names = names
+        self.delta = np.zeros((self.blendshapes.shape[0], self.V.shape[0]))
+        for i in range(self.blendshapes.shape[0]):
+            self.delta[i] = np.linalg.norm(self.blendshapes[i], axis=1)
+        self.weights = np.zeros(self.blendshapes.shape[0])
+        self.translation = np.array([0, 0, 0])
+        self.scale_factor = 1
+        N = igl.per_vertex_normals(self.V, self.F)
+        self.facing_dir = np.mean(N, axis=0)
+        self.facing_dir /= np.linalg.norm(self.facing_dir)
+
+    def translate(self, delta_pos):
+        self.translation += np.array(delta_pos)
+
+    def scale(self, scaling=1):
+        self.scale_factor = scaling
+    
+    def displacement(self, weights=None):
+        if weights is None:
+            weights = self.weights
+        return (weights @ self.blendshapes.reshape(weights.shape[0], -1)).reshape(self.V.shape[0], 3)
+
+    def eval(self, weights=None):
+        V = self.V.copy()
+        if weights is None:
+            weights = self.weights
+        V += self.displacement(weights)
+        V *= self.scale_factor
+        V += self.translation
+        self.V_cache = V.copy()  # Cache the current vertices after evaluation
+        return V
+
+    def facing_dire(self):
+        return self.facing_dir
+    
+    def __len__(self):
+        return self.blendshapes.shape[0]
+    
+    def __getitem__(self, idx):
+        return self.blendshapes[idx]
+
+
+class FLAMEBlendshapes:
+    def __init__(self, n_shape, n_exp, dtype=torch.float32, device=None):
+        """
+        Initialize FLAMEBlendshapes with configurable precision.
+        
+        Args:
+            dtype: torch.dtype, either torch.float32 or torch.float64 (double)
+        """
+        self.dtype = dtype
+        # Set numpy dtype based on torch dtype
+        self.np_dtype = np.float32 if dtype == torch.float32 else np.float64
+        
+        FLAMEConfig = SimpleNamespace(
+                # flame_model_path=str(__dir__ / 'data/FLAME2020/generic_model.pkl'),
+                flame_model_path=os.path.join(PROJ_ROOT, "flame_model/FLAME2020/flame2023_no_jaw.pkl"),
+                n_shape=n_shape,
+                n_exp=n_exp,
+                n_tex=50,
+                tex_type=None,
+                tex_path=None,
+                flame_lmk_embedding_path=os.path.join(PROJ_ROOT, "flame_model/landmark_embedding.npy"),
+            )
+        self.n_exp = n_exp
+        self.n_shape = n_shape
+        self.FLAMEConfig = FLAMEConfig
+        self.flame = FLAME(FLAMEConfig)
+        F_flame_path = os.path.join(PROJ_ROOT, "flame_model/faces_flame.pickle")
+        with open(F_flame_path, "rb") as f:
+            F_flame = pickle.load(f)["faces"]
+        
+        self.shape_params = torch.zeros([1, FLAMEConfig.n_shape], dtype=self.dtype).to(self.flame.device)
+        self.exp_params = torch.zeros([1, FLAMEConfig.n_exp], dtype=self.dtype).to(self.flame.device)
+        self.tex_params = torch.zeros([1, 50], dtype=self.dtype).to(self.flame.device)
+        self.pose_params = torch.zeros([1, 3], dtype=self.dtype).to(self.flame.device)
+        self.jaw_params = torch.zeros([1, 3], dtype=self.dtype).to(self.flame.device)
+        self.eye_pose_params = torch.zeros([1, 6], dtype=self.dtype).to(self.flame.device)
+        
+        vertices, landmarks2d, landmarks3d = self.flame(self.shape_params, self.exp_params, pose_params=torch.concat([self.pose_params, self.jaw_params], dim=1))
+
+        
+        self.F = F_flame
+
+        # names of the blendshapes + jaw
+        self.names = [f"bs_{i}" for i in range(self.FLAMEConfig.n_exp)]
+        self.names += [f"jaw_{i}" for i in range(3)]
+
+        blendshape_exp, blendshapes_jaw, blendshape_mean = get_flame_blendshapes(self.flame)
+        self.blendshape_exp = blendshape_exp.to(self.dtype).cpu().numpy().transpose(2, 0, 1).astype(self.np_dtype)
+        self.blendshapes_jaw = blendshapes_jaw.to(self.dtype).cpu().numpy().transpose(2, 0, 1).astype(self.np_dtype)
+        self.blendshape_mean = blendshape_mean.to(self.dtype).cpu().numpy().astype(self.np_dtype)
+
+        self.V = self.blendshape_mean
+        self.V = self.V - np.mean(self.V, axis=0)
+        self.V_cache = self.V.copy()  # Cache the neutral pose vertices
+        # get all the blendshapes    
+        self.blendshapes = np.concatenate([self.blendshape_exp + self.blendshape_mean, self.blendshapes_jaw + self.blendshape_mean], axis=0)
+        # self.blendshapes = self.blendshape_exp + self.blendshape_mean
+
+        self.delta = np.zeros((self.blendshapes.shape[0], self.V.shape[0]), dtype=self.np_dtype)
+        for i in range(self.blendshapes.shape[0]):
+            self.delta[i] = np.linalg.norm(self.blendshapes[i], axis=1)
+        self.weights = np.zeros(self.blendshapes.shape[0], dtype=self.np_dtype)
+        self.translation = np.array([0, 0, 0], dtype=self.np_dtype)
+        self.scale_factor = 1.0
+        N = igl.per_vertex_normals(self.V, self.F)
+        self.facing_dir = np.mean(N, axis=0)
+        self.facing_dir /= np.linalg.norm(self.facing_dir)
+
+    def get_landmark_indices(self):
+        return self.flame.full_lmk_faces_idx
+    def translate(self, delta_pos):
+        self.translation += np.array(delta_pos, dtype=self.np_dtype)
+
+    def scale(self, scaling=1):
+        self.scale_factor = scaling
+    
+    def displacement(self, weights=None):
+        if weights is None:
+            weights = self.weights
+        
+        self.exp_params = torch.from_numpy(weights[:self.FLAMEConfig.n_exp]).to(self.dtype).unsqueeze(0).to(self.flame.device)
+        self.jaw_params = torch.from_numpy(weights[self.FLAMEConfig.n_exp:]).to(self.dtype).unsqueeze(0).to(self.flame.device)
+        return
+    
+    def eval(self, weights=None, return_landmarks=False, pose_params=None):
+        self.displacement(weights) # update the parameter if it changes        
+        if pose_params is not None:
+            self.pose_params = torch.from_numpy(pose_params).to(self.dtype).unsqueeze(0).to(self.flame.device)
+
+                # def forward(self, shape_params=None, expression_params=None, pose_params=None, eye_pose_params=None, pose2rot=True,
+                # ignore_global_rot=False, return_lm2d=True, return_lm3d=True):
+        vertices, landmarks2d, landmarks3d = self.flame(self.shape_params, self.exp_params, pose_params=torch.concat([self.pose_params, self.jaw_params], dim=1), ignore_global_rot=True)
+        V = vertices[0].cpu().numpy().astype(self.np_dtype)
+        V = V - np.mean(self.V, axis=0)
+        
+        self.V_cache = V.copy()  # Cache the current vertices after evaluation
+        if return_landmarks:
+            landmarks3d = landmarks3d[0].cpu().numpy().astype(self.np_dtype)
+            landmarks3d = landmarks3d - np.mean(self.V, axis=0)
+            landmarks3d *= self.scale_factor
+            landmarks3d += self.translation
+            return V, landmarks3d
+        else:
+           return V
+    
+    def facing_dire(self):
+        return self.facing_dir
+    def __len__(self):
+        return self.blendshapes.shape[0]
+    def __getitem__(self, idx):
+        return self.blendshapes[idx]
+
+if __name__ == "__main__":
+    flameBS = FLAMEBlendshapes()
+    V = flameBS.eval()   
+    # Load blendshapes
+    
+    
+    std = get_flame_pca_std_from_pkl("/Users/evanpan/Documents/GitHub/ManifoldExploration/data/flame_model/FLAME2020/generic_model.pkl")
+    

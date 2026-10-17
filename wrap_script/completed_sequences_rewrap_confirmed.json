@@ -1,0 +1,356 @@
+{
+  "037": [
+    "EMO-1-shout+laugh",
+    "EMO-2-surprise+fear",
+    "EMO-4-disgust+happy",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "031": [
+    "EMO-1-shout+laugh",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-08-clothes_and_lodging"
+  ],
+  "030": [
+    "EXP-2-eyes",
+    "EXP-4-lips"
+  ],
+  "024": [
+    "EMO-1-shout+laugh",
+    "EMO-2-surprise+fear",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "032": [
+    "EMO-3-angry+sad",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "033": [
+    "EMO-2-surprise+fear",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief"
+  ],
+  "035": [
+    "EMO-1-shout+laugh",
+    "EMO-2-surprise+fear",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-8-jaw-1",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "036": [
+    "EMO-1-shout+laugh",
+    "EMO-3-angry+sad",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "SEN-05-glow_eyes_sweet_girl"
+  ],
+  "038": [
+    "EMO-1-shout+laugh",
+    "EXP-4-lips"
+  ],
+  "040": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "042": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "SEN-08-clothes_and_lodging"
+  ],
+  "043": [
+    "EMO-1-shout+laugh",
+    "EMO-2-surprise+fear",
+    "EMO-3-angry+sad",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-10-port_strong_smokey"
+  ],
+  "055": [
+    "EMO-2-surprise+fear",
+    "EMO-3-angry+sad",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-8-jaw-1",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad"
+  ],
+  "056": [
+    "EMO-1-shout+laugh",
+    "EMO-2-surprise+fear",
+    "EMO-3-angry+sad",
+    "EXP-1-head",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging"
+  ],
+  "058": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes"
+  ],
+  "059": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "EXP-9-jaw-2",
+    "FREE",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-10-port_strong_smokey"
+  ],
+  "060": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes"
+  ],
+  "064": [
+    "EMO-2-surprise+fear",
+    "EMO-3-angry+sad",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-5-mouth",
+    "EXP-8-jaw-1",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "061": [
+    "EMO-1-shout+laugh",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "067": [
+    "EMO-1-shout+laugh",
+    "EMO-3-angry+sad",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "065": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "FREE"
+  ],
+  "069": [
+    "EMO-1-shout+laugh",
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-05-glow_eyes_sweet_girl",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ],
+  "068": [
+    "EXP-2-eyes"
+  ],
+  "071": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes"
+  ],
+  "074": [
+    "EXP-2-eyes",
+    "EXP-4-lips",
+    "FREE",
+    "SEN-01-cramp_small_danger"
+  ],
+  "075": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "076": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes"
+  ],
+  "078": [
+    "EXP-2-eyes"
+  ],
+  "080": [
+    "EMO-1-shout+laugh"
+  ],
+  "085": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "079": [
+    "EXP-2-eyes"
+  ],
+  "083": [
+    "EXP-3-cheeks+nose",
+    "EXP-8-jaw-1"
+  ],
+  "081": [
+    "EXP-2-eyes",
+    "EXP-3-cheeks+nose",
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "082": [
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "089": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes",
+    "EXP-4-lips"
+  ],
+  "088": [
+    "EXP-2-eyes"
+  ],
+  "094": [
+    "EMO-1-shout+laugh",
+    "EXP-2-eyes"
+  ],
+  "093": [
+    "EXP-4-lips",
+    "EXP-8-jaw-1"
+  ],
+  "017": [
+    "EMO-4-disgust+happy",
+    "EXP-2-eyes",
+    "EXP-4-lips",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-04-two_plus_seven",
+    "SEN-08-clothes_and_lodging"
+  ],
+  "018": [
+    "EMO-4-disgust+happy",
+    "FREE",
+    "SEN-01-cramp_small_danger",
+    "SEN-02-same_phrase_thirty_times",
+    "SEN-03-pluck_bright_rose",
+    "SEN-04-two_plus_seven",
+    "SEN-06-problems_wise_chief",
+    "SEN-08-clothes_and_lodging",
+    "SEN-09-frown_events_bad",
+    "SEN-10-port_strong_smokey"
+  ]
+}

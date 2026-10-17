@@ -1,0 +1,54 @@
+facescape_pipeline manifest (built 2026-10-16 on Medusa; source -> path here)
+
+## wrap_script_facescape/ (from /scratch/ondemand32/irwinngo/wrap_script_facescape; hard-coded paths replaced by facescape_paths.py)
+wrap_script_facescape/check_skin_landmark_errors.py
+wrap_script_facescape/coordinate_transforms/apply_origin_rotation_fix.py
+wrap_script_facescape/coordinate_transforms/fix_origin_rotation.py
+wrap_script_facescape/coordinate_transforms/geometry.py
+wrap_script_facescape/coordinate_transforms/inputs/1_1_neutral_to_origin.json
+wrap_script_facescape/coordinate_transforms/inputs/2_1_neutral_to_1_1_neutral.json
+wrap_script_facescape/coordinate_transforms/params_io.py
+wrap_script_facescape/coordinate_transforms/run_batch_transform.py
+wrap_script_facescape/coordinate_transforms/run_origin_transform.py
+wrap_script_facescape/coordinate_transforms/solve_alignment.py
+wrap_script_facescape/coordinate_transforms/transform_mesh.py
+wrap_script_facescape/.env
+wrap_script_facescape/.env.example
+wrap_script_facescape/facescape_cameras.json
+wrap_script_facescape/facescape_mask.txt
+wrap_script_facescape/facescape_paths.py
+wrap_script_facescape/invalid_pairs.py
+wrap_script_facescape/labeling/compute_facescape_cameras.py
+wrap_script_facescape/neutral_correspondence_without_eyes_POT_all.json
+wrap_script_facescape/neutral_correspondence_without_eyes_POT.json
+wrap_script_facescape/neutral.obj
+wrap_script_facescape/README.md
+wrap_script_facescape/render_flame_neutral.py
+wrap_script_facescape/render_landmarks_facescape.py
+wrap_script_facescape/render_overlay_frame.py
+wrap_script_facescape/render_point_overlay_frame.py
+wrap_script_facescape/run_neutral_skin_propagation_batch.py
+wrap_script_facescape/run_neutral_skin_propagation_invalid.py
+wrap_script_facescape/run_neutral_skin_propagation.py
+wrap_script_facescape/run_pipeline_batch.py
+wrap_script_facescape/run_pipeline_invalid.py
+wrap_script_facescape/run_pipeline.py
+wrap_script_facescape/run_process_expression_sapiens_batch_invalid.py
+wrap_script_facescape/run_process_expression_sapiens_batch.py
+wrap_script_facescape/run_wrap_script.py
+wrap_script_facescape/script_run_neutral_skin_propagation.sh
+wrap_script_facescape/template.wrap
+
+## wrap_script/, FaceView/, envs/ (copied from /scratch/ondemand32/irwinngo/nersemble_pipeline, unchanged)
+FaceView/scripts/preprocess/process_expression_sapiens.py, process_expression_sapiens_invalid.py added from /scratch/ondemand32/irwinngo/FaceView (SANITY_RENDER_ROOT / SAPIENS_CHECKPOINT_ROOT now from the environment)
+
+## ava256_shared/ (from /scratch/ondemand32/irwinngo/wrap_script_ava256, unchanged)
+camera_classify.py
+camera_selection.py
+camera_utils.py
+extract_obj.py
+mesh_utils.py
+__pycache__
+render_overlay.py
+
+## left out of wrap_script_facescape: logs/, metadata/, __pycache__, test.py, test_render_gt_frame.py, run_pipeline_ear_test.py, run_pipeline_no_skin.py, render_final_overlay.py, render_overlay_comparison.py, one-off migrations (bulk_unconfirmed_to_unlabeled, mark_no_neutral_label, migrate_*, rebuild_facescape_labels, reset_leaked_invalid_pairs), template.wrap.before_ava256_weights.bak, wrapped_mesh_overlay_test.jpg, coordinate_transforms/{manifest.jsonl,failures.jsonl,logs,test_output}

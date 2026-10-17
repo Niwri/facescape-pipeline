@@ -1,0 +1,22 @@
+[
+  {"actor": "033", "sequence": "EMO-1-shout+laugh", "reason": "corrupted FLAME fit.npz (all-NaN shape/expr/rot/tra)"},
+  {"actor": "018", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "018", "sequence": "EXP-2-eyes"},
+  {"actor": "018", "sequence": "EXP-3-cheeks+nose"},
+  {"actor": "018", "sequence": "EXP-4-lips"},
+  {"actor": "018", "sequence": "EXP-8-jaw-1"},
+  {"actor": "057", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "064", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "104", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "030", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "030", "sequence": "EMO-2-surprise+fear"},
+  {"actor": "030", "sequence": "EMO-3-angry+sad"},
+  {"actor": "030", "sequence": "EXP-3-cheeks+nose"},
+  {"actor": "030", "sequence": "EXP-8-jaw-1"},
+  {"actor": "063", "sequence": "EXP-2-eyes"},
+  {"actor": "063", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "063", "sequence": "EXP-4-lips"},
+  {"actor": "063", "sequence": "EXP-8-jaw-1"},
+  {"actor": "068", "sequence": "EMO-1-shout+laugh"},
+  {"actor": "074", "sequence": "EMO-1-shout+laugh", "reason": "face_ray_masking's PyTorch3D rasterizer reproducibly hits \"CUDA error: no kernel image is available for execution on the device\" for this mesh -- not a data issue (all 16 camera videos are valid)"}
+]

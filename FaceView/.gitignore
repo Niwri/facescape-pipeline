@@ -1,0 +1,20 @@
+# Generated / installed -- recreate with npm ci / pip install
+node_modules/
+frontend/dist/
+frontend/.vite
+frontend/*.mjs
+__pycache__/
+*.pyc
+*.egg-info/
+.metadata/
+metadata/jobs/*
+
+# Per-machine settings: copy the matching .env.example to .env and edit
+.env
+
+# Data never lives in the repo
+data/
+processed/
+landmarks/
+plots/
+co-tracker/co-tracker/
