@@ -37,7 +37,9 @@ import contextlib
 import fcntl
 import importlib.util
 import json
+import shutil
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -69,6 +71,7 @@ SKIN_REGIONS = _skin_landmarks_module.SKIN_REGIONS
 assign_global_indices = _skin_landmarks_module.assign_global_indices
 
 from run_pipeline import run_pipeline as wrap_pipeline  # noqa: E402
+import forehead_shift  # noqa: E402  (forehead skin target shift)
 from backend.app.core.config import get_settings  # noqa: E402
 from backend.app.services.label_tracker import label_tracker  # noqa: E402
 from backend.app.services import facescape_neutral  # noqa: E402
@@ -799,6 +802,60 @@ def _expression_pair_lock(landmarks_root: Path, actor_id: str, expression_id: st
         lock_file.close()
 
 
+def ensure_forehead_shift(actor_id: str, neutral_expression_id: str, mesh, assigned: list, skin_world_xyz: dict,
+                          settings) -> dict:
+    """The actor's forehead shift (forehead_shift.py), searched once and kept in
+    <output>/<actor>/<neutral>/forehead_shift.json: the forehead skin points of the neutral wrap moved down over
+    it by d, d found by secant search on trial neutral wraps (run_pipeline with skin_override = every skin point
+    of this wrap, forehead ones shifted; no label change, no renders) until the forehead ratio is within
+    forehead_shift.TOLERANCE of forehead_shift.TARGET_RATIO (at most MAX_STEPS wraps; the closest is kept). The
+    neutral wrap is restored after every trial. Reused when done for the same target, so a rerun never shifts
+    an already shifted wrap again."""
+    import trimesh
+    out_dir = settings.facescape_output_root / actor_id / neutral_expression_id
+    existing = forehead_shift.load(out_dir)
+    if (existing and existing.get("status") == "done"
+            and abs(existing.get("target_ratio", -1) - forehead_shift.TARGET_RATIO) < 1e-9):
+        print(f"[actor={actor_id}] forehead shift d={existing['d']:.4f} (ratio {existing['ratio']:.3f}) from {forehead_shift.SHIFT_NAME}")
+        return existing
+    target = forehead_shift.TARGET_RATIO
+    verts = np.asarray(mesh.vertices, dtype=np.float64); faces = np.asarray(mesh.faces, dtype=np.int64)
+    rows = [g for g, _region, v in assigned if v in forehead_shift.FOREHEAD_VERTICES]
+    base_pts = np.stack([skin_world_xyz[g] for g in rows])
+    length = forehead_shift.brow_chin_length(verts); r0 = forehead_shift.forehead_ratio(verts)[0]
+    if r0 <= target:  # down only: a forehead already at or below the target is left as is
+        payload = forehead_shift.no_shift_payload(r0, target); forehead_shift.save(out_dir, payload)
+        print(f"[actor={actor_id}] forehead ratio {r0:.3f} <= target {target:.3f} -- no forehead shift (down only)")
+        return payload
+    wrapped = out_dir / "wrapped_mesh.obj"; keep = out_dir / "forehead_shift_base_wrapped_mesh.obj"
+    shutil.copy2(wrapped, keep)
+    history = [(0.0, r0)]; best = None
+    d = forehead_shift.next_distance(history, target, length)
+    print(f"[actor={actor_id}] forehead shift search -- neutral ratio {r0:.3f}, target {target:.3f}, rows {rows}")
+    try:
+        for step in range(1, forehead_shift.MAX_STEPS + 1):
+            pts = forehead_shift.shift_down(base_pts, verts, faces, d)
+            override = dict(skin_world_xyz); override.update(dict(zip(rows, pts)))
+            wrap_pipeline(actor_id, neutral_expression_id, skin_override=override, mark=False, render=False)
+            r = forehead_shift.forehead_ratio(np.asarray(trimesh.load(str(wrapped), process=False).vertices))[0]
+            shutil.copy2(keep, wrapped)
+            history.append((d, r))
+            print(f"[actor={actor_id}] forehead shift step {step}: d={d:.4f} ({d / length:.3f} brow-chin) -> ratio {r:.3f}")
+            if best is None or abs(r - target) < abs(best[1] - target):
+                best = (d, r, pts)
+            if abs(r - target) < forehead_shift.TOLERANCE:
+                break
+            d = forehead_shift.next_distance(history, target, length)
+    finally:
+        shutil.copy2(keep, wrapped)
+    payload = {"status": "done", "target_ratio": target, "d": best[0], "ratio": best[1], "d_over_brow_chin": best[0] / length,
+               "rows": rows, "points_world": {str(i): p.tolist() for i, p in zip(rows, best[2])},
+               "base_ratio": r0, "history": history, "computed": time.strftime("%Y-%m-%d %H:%M:%S")}
+    forehead_shift.save(out_dir, payload)
+    print(f"[actor={actor_id}] forehead shift d={best[0]:.4f} -> ratio {best[1]:.3f} (target {target:.3f})")
+    return payload
+
+
 def process_actor(
     actor_id: str,
     settings,
@@ -886,7 +943,19 @@ def process_actor(
     mesh = trimesh.load(str(neutral_wrapped), process=False)
     regions = _skin_landmarks_module.load_skin_regions()
     assigned = assign_global_indices(regions)
+    # forehead_shift.EXTRA_SKIN_VERTICES (e.g. vertex 668): extra skin rows after the shared ones, tracked with the
+    # front region's cameras (run_pipeline.py appends the same rows).
+    assigned = list(assigned) + [(_skin_landmarks_module.NUM_STANDARD_LANDMARKS + len(assigned) + k, "front", int(v))
+                                 for k, v in enumerate(forehead_shift.EXTRA_SKIN_VERTICES)]
     skin_world_xyz = {global_idx: np.asarray(mesh.vertices[vertex_idx], dtype=np.float64) for global_idx, _region, vertex_idx in assigned}
+    # Forehead shift (forehead_shift.py): forehead skin points moved down over the neutral wrap until a neutral
+    # wrap's forehead ratio reaches forehead_shift.TARGET_RATIO; they seed the neutral's skin_frame files and the
+    # propagation to every other expression.
+    if not dry_run:
+        forehead = ensure_forehead_shift(actor_id, neutral_expression_id, mesh, assigned, skin_world_xyz, settings)
+        for idx, p in forehead_shift.shifted_points(forehead).items():
+            if idx in skin_world_xyz:
+                skin_world_xyz[idx] = p
     indices_by_region: dict[str, list[int]] = {region: [] for region in SKIN_REGIONS}
     for global_idx, region, _vertex_idx in assigned:
         indices_by_region[region].append(global_idx)

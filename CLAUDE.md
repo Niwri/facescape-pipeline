@@ -29,6 +29,13 @@ are Medusa examples).
 - **Template wraps are face-scaled** (`face_scale.py`, "P5": vertical brow-to-chin, horizontal outer eye corners),
   then mapped back to world space; the map is saved in `face_scale.json`. Keep `scan.obj` and
   `keypoint_vertices.json` in world space.
+- **Forehead shift** (`forehead_shift.py`, target forehead ratio 0.340 = Nersemble FLAME fits): before seeding,
+  `run_neutral_skin_propagation.py` moves the forehead skin points (rows 77-124 + row 140 = extra vertex 668) down
+  over the neutral wrap (down only: never up, and an actor already at or below 0.340 is not shifted; distance
+  capped at 6% of brow-chin), searching the distance with trial neutral wraps (`run_pipeline(..., skin_override=,
+  mark=False, render=False)`); stored in `<output>/<actor>/<neutral>/forehead_shift.json` and reused. Row 140 is
+  FaceScape/Ava-only: valid pairs use `neutral_correspondence_without_eyes_POT_all_forehead.json` (141 rows); the
+  invalid-pair scripts are unchanged (140 rows, no shift).
 
 ## Testing and safety
 - **Sandbox a test:** override `FACESCAPE_OUTPUT_ROOT`, `LABEL_TRACKER_PATH`, `LINE_RENDERS_FACESCAPE_ROOT` and

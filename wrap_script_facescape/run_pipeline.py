@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -89,6 +90,7 @@ load_camera_skin_points = _propagated_landmarks_module.load_camera_skin_points
 from render_overlay_frame import render_overlay_frame  # noqa: E402
 from run_wrap_script import wrap_mesh, DEFAULT_NEUTRAL_MESH_PATH, DEFAULT_POT_PATH  # noqa: E402
 import face_scale  # noqa: E402  (face-based target scaling for template wraps)
+import forehead_shift  # noqa: E402  (forehead skin target shift, forehead_shift.py)
 from backend.app.core.config import get_settings  # noqa: E402
 from backend.app.services import facescape_neutral  # noqa: E402
 from backend.app.services.label_tracker import label_tracker  # noqa: E402
@@ -142,15 +144,21 @@ def _compute_skin_pot_entries(topology_mesh_path: str, skin_vertex_indices: list
     return entries
 
 
-def ensure_extended_correspondence_files(topology_mesh_path: str, skin_vertex_indices: list[int]) -> str:
+# The valid-pair path appends forehead_shift.EXTRA_SKIN_VERTICES after the shared skin rows; kept in its own
+# file so the invalid-pair path (shared skin rows only) never rebuilds over it.
+EXTENDED_POT_FOREHEAD_PATH = SCRIPT_DIR / "neutral_correspondence_without_eyes_POT_all_forehead.json"
+
+
+def ensure_extended_correspondence_files(topology_mesh_path: str, skin_vertex_indices: list[int],
+                                         path: Path = EXTENDED_POT_PATH) -> str:
     """Idempotently builds (if missing or stale) and returns the path to the
     extended POT template file that includes the skin indices on top of the
     standard 74 -- FaceScape counterpart to wrap_script/run_pipeline_all.py's
     ensure_extended_correspondence_files(), minus the whitelist half (not
     needed here, see EXTENDED_POT_PATH's own comment above)."""
     need_rebuild = True
-    if EXTENDED_POT_PATH.exists():
-        with EXTENDED_POT_PATH.open("r", encoding="utf-8") as f:
+    if path.exists():
+        with path.open("r", encoding="utf-8") as f:
             existing = json.load(f)
         need_rebuild = len(existing) != NUM_STANDARD_LANDMARKS + len(skin_vertex_indices)
 
@@ -158,12 +166,14 @@ def ensure_extended_correspondence_files(topology_mesh_path: str, skin_vertex_in
         with open(DEFAULT_POT_PATH, "r") as f:
             base_pot = json.load(f)
         skin_pot = _compute_skin_pot_entries(topology_mesh_path, skin_vertex_indices)
-        with EXTENDED_POT_PATH.open("w", encoding="utf-8") as f:
+        tmp = path.with_name(path.name + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
             json.dump(base_pot + skin_pot, f)
-        print(f"Rebuilt {EXTENDED_POT_PATH.name} ({NUM_STANDARD_LANDMARKS} standard + "
+        os.replace(tmp, path)
+        print(f"Rebuilt {path.name} ({NUM_STANDARD_LANDMARKS} standard + "
               f"{len(skin_vertex_indices)} skin indices)")
 
-    return str(EXTENDED_POT_PATH)
+    return str(path)
 
 # Cameras the Overlay Frame tab's keyline renders always come from -- see
 # render_overlay_frame() below and FaceView/backend/app/api/routes/facescape.py's
@@ -174,7 +184,11 @@ def ensure_extended_correspondence_files(topology_mesh_path: str, skin_vertex_in
 OVERLAY_FRAME_CAMERA_IDS = ["1", "4", "17"]
 
 
-def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | None = None) -> Path:
+def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | None = None,
+                 skin_override: dict | None = None, mark: bool = True, render: bool = True) -> Path:
+    """skin_override {global index: world xyz} (forehead shift trial wraps, run_neutral_skin_propagation.
+    ensure_forehead_shift): every skin row's target taken from it instead of the skin_frame files; mark/render
+    False leave the label status and overlay renders alone."""
     settings = get_settings()
     expr_dir = settings.facescape_images_root / actor_id / expression_id
     params_path = expr_dir / "params.json"
@@ -230,6 +244,10 @@ def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | 
     # NOT conditional on propagation having actually happened yet, unlike the
     # per-pair skin_frame_000000.json files themselves.
     skin_vertex_indices = load_skin_vertex_indices()
+    # forehead_shift.EXTRA_SKIN_VERTICES (e.g. vertex 668, the mirror of skin landmark 106): extra rows after the
+    # shared skin rows -- optional (pairs propagated before them simply leave them out, see below).
+    n_shared_skin = len(skin_vertex_indices)
+    skin_vertex_indices = skin_vertex_indices + list(forehead_shift.EXTRA_SKIN_VERTICES)
     num_vertices = NUM_STANDARD_LANDMARKS + len(skin_vertex_indices)
 
     points_list: list[list[tuple[int, np.ndarray, bool]]] = [[] for _ in range(num_vertices)]
@@ -269,8 +287,11 @@ def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | 
     # hasn't been through run_neutral_skin_propagation.py yet. Rather than error
     # (or silently corrupt the wrap), degrade to exactly this script's prior
     # standard-only (74-point) behavior for this pair.
-    if skin_vertex_indices:
-        insufficient = [idx for idx in range(NUM_STANDARD_LANDMARKS, num_vertices) if len(points_list[idx]) < 2]
+    if skin_override is not None:
+        points_list = points_list[:NUM_STANDARD_LANDMARKS]  # skin rows come from skin_override below
+    elif skin_vertex_indices:
+        insufficient = [idx for idx in range(NUM_STANDARD_LANDMARKS, NUM_STANDARD_LANDMARKS + n_shared_skin)
+                        if len(points_list[idx]) < 2]
         if insufficient:
             print(f"NOTE: {len(insufficient)}/{len(skin_vertex_indices)} skin point(s) have fewer than 2 camera "
                   f"observations (probably not propagated yet for {actor_id}/{expression_id}) -- "
@@ -289,6 +310,23 @@ def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | 
     # throwing off sapiens2's detection) gets dropped for that point instead
     # of silently corrupting the triangulated result.
     formatted, untriangulated_indices = triangulate(np.array(intrinsics), extrinsics, points_list, widths, heights)
+    if skin_override is not None:
+        formatted = list(formatted[:NUM_STANDARD_LANDMARKS])
+        for idx in range(NUM_STANDARD_LANDMARKS, num_vertices):
+            x, y, z = (float(c) for c in skin_override[idx])
+            formatted.append({"x": x, "y": y, "z": z})
+    elif len(formatted) > NUM_STANDARD_LANDMARKS:
+        # Forehead shift: on the actor's neutral expression the forehead rows are taken exactly from its
+        # forehead_shift.json (the same points the skin_frame files were projected from).
+        neutral_id = facescape_neutral.load_actor_neutral_expression(actor_id)
+        shift = forehead_shift.load(settings.facescape_output_root / actor_id / neutral_id) if neutral_id == expression_id else None
+        if shift and shift.get("status") == "done":
+            pts = forehead_shift.shifted_points(shift)
+            for idx, p in pts.items():
+                if idx < len(formatted):
+                    formatted[idx] = {"x": float(p[0]), "y": float(p[1]), "z": float(p[2])}
+            untriangulated_indices = [i for i in untriangulated_indices if i not in pts]
+            print(f"Forehead shift (d={shift['d']:.4f}): rows {sorted(pts)} from {forehead_shift.SHIFT_NAME}")
     if untriangulated_indices:
         print(f"NOTE: {len(untriangulated_indices)} point(s) could not be triangulated (no in-bounds view in any "
               f"camera) -- excluded from the correspondence map: {untriangulated_indices}")
@@ -315,7 +353,9 @@ def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | 
     # not a re-triangulation), so either source gives identical POT entries.
     pot_template_path = None
     if skin_vertex_indices:
-        pot_template_path = ensure_extended_correspondence_files(str(DEFAULT_NEUTRAL_MESH_PATH), skin_vertex_indices)
+        pot_template_path = ensure_extended_correspondence_files(
+            str(DEFAULT_NEUTRAL_MESH_PATH), skin_vertex_indices,
+            EXTENDED_POT_FOREHEAD_PATH if len(skin_vertex_indices) > n_shared_skin else EXTENDED_POT_PATH)
 
     # Same neutral-frame chaining as wrap_script/run_pipeline_all.py: every
     # expression OTHER than this actor's own neutral wraps from THIS actor's
@@ -377,7 +417,10 @@ def run_pipeline(actor_id: str, expression_id: str, exclude_cameras: set[str] | 
     # run_pipeline_batch_all.py's mark_unconfirmed() -- a no-op if this pair
     # isn't currently "unreviewed" (e.g. a rerun on a pair already unconfirmed
     # or confirmed), so reruns can't silently undo a human's later decision.
-    label_tracker.mark_unconfirmed(actor_id, expression_id, dataset="FaceScape")
+    if mark:
+        label_tracker.mark_unconfirmed(actor_id, expression_id, dataset="FaceScape")
+    if not render:
+        return output_wrap_path
 
     # Best-effort, same reasoning as run_pipeline_batch_all.py's
     # render_overlay_video(): the pair is already wrapped and its status
